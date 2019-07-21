@@ -123,11 +123,9 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 //                .logout()
 //                .permitAll();
 
-        http.csrf().disable() //关闭csrf验证
-                .cors()//跨域请求
-                .and()
-                //.authenticationProvider(authenticationProvider)
-                .httpBasic().authenticationEntryPoint((request,response,authException) -> {
+        http
+                .exceptionHandling()
+                .authenticationEntryPoint((request,response,authException) -> {
                     response.setContentType("application/json;charset=utf-8");
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     PrintWriter out = response.getWriter();
@@ -135,11 +133,20 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                     out.flush();
                     out.close();
                 }) //未登录时返回JSON数据
+                .and()
+                .csrf().disable() //关闭csrf验证
+                .cors()//跨域请求
+                .and()
+                //.authenticationProvider(authenticationProvider)
+                .httpBasic()
                 // 定制请求的授权规则
                 .and()
                 .authorizeRequests()
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                .antMatchers("/", "/user/getotp",  "/user/registerbyphone", "/accesstoken").permitAll() //无条件允许访问
+                .antMatchers("/",
+                        "/user/getotp",
+                        "/user/registerbyphone",
+                        "/accesstoken").permitAll() //无条件允许访问
 //              .antMatchers("/security/user/**").hasRole("ADMIN") //需要ADMIN角色才可以访问
                 .anyRequest()
                 .authenticated() //其他url需要身份认证

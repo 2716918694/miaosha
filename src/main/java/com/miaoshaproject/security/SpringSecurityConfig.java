@@ -49,90 +49,27 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         return source;
     }
 
-//    @Override
-//    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-//        // 使用自定义UserDetailsService
-//        auth.userDetailsService(userDetailsService);
-//    }
-
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-
-//        http
-//                //.addFilterBefore(mySecurityFilter, FilterSecurityInterceptor.class)//在正确的位置添加我们自定义的过滤器, "/user/getotp"
-//                .csrf().disable()
-//                .anonymous().disable()
-//                .cors()
-//                .and()
-//                .authorizeRequests()
-//                .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-//                .antMatchers("/", "/user/get","/user/login", "/user/registerbyphone", "/user/getotp", "/user/verifyotp", "/accesstoken").permitAll()//访问：/home 无需登录认证权限
-//                //其他地址的访问均需验证权限
-//                .anyRequest().authenticated()//其他所有资源都需要认证，登陆后访问
-//                .and()
-//                .authenticationProvider(authenticationProvider)
-//                .httpBasic()
-//                .authenticationEntryPoint((request,response,authException) -> {
-//                    response.setContentType("application/json;charset=utf-8");
-//                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-//                    PrintWriter out = response.getWriter();
-//                    out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","未登陆")));
-//                    out.flush();
-//                    out.close();
-//                })
-//                .and()
-//                .formLogin()
-//                //指定登录页是"/login"
-//                .loginProcessingUrl("/login")
-//                //登录成功后默认跳转到"/hello"
-////              .failureUrl("/403")
-//                .permitAll()
-//                //.failureHandler(loginSuccessHandler())//code3
-//                .failureHandler((request,response,ex) -> {
-//                    response.setContentType("application/json;charset=utf-8");
-//                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-//                    PrintWriter out = response.getWriter();
-//                    if (ex instanceof UsernameNotFoundException || ex instanceof BadCredentialsException) {
-//                        out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","用户名或密码错误3")));
-//                    } else if (ex instanceof DisabledException) {
-//                        out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","用户被禁用")));
-//                    } else {
-//                        out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","登录失败")));
-//                    }
-//                    out.flush();
-//                    out.close();
-//                })
-//                .successHandler((request,response,authentication) -> {
-//                    response.setContentType("application/json;charset=utf-8");
-//                    PrintWriter out = response.getWriter();
-//                    out.write(objectMapper.writeValueAsString(CommonReturnType.create(authentication.getPrincipal())));
-//                    out.flush();
-//                    out.close();
-//                })
-//                .and()
-//                .exceptionHandling()
-//                .accessDeniedHandler((request,response,ex) -> {
-//                    response.setContentType("application/json;charset=utf-8");
-//                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-//                    PrintWriter out = response.getWriter();
-//                    out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","权限不足")));
-//                    out.flush();
-//                    out.close();
-//                })
-//                .and()
-//                .logout()
-//                .permitAll();
 
         http
                 .exceptionHandling()
                 .authenticationEntryPoint((request,response,authException) -> {
                     response.setContentType("application/json;charset=utf-8");
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     PrintWriter out = response.getWriter();
                     out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","未登陆")));
                     out.flush();
                     out.close();
                 }) //未登录时返回JSON数据
+                .accessDeniedHandler((request,response,ex) -> {
+                    response.setContentType("application/json;charset=utf-8");
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    PrintWriter out = response.getWriter();
+                    out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","权限不足")));
+                    out.flush();
+                    out.close();
+                })//用户权限不足，禁止访问时
                 .and()
                 .csrf().disable() //关闭csrf验证
                 .cors()//跨域请求
@@ -144,8 +81,9 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 .antMatchers("/",
-                        "/user/getotp",
-                        "/user/registerbyphone",
+                        "/user/getOtp",
+                        //"/user/postOtp",//测试登录验证
+                        "/user/putUserByPhone",
                         "/accesstoken").permitAll() //无条件允许访问
 //              .antMatchers("/security/user/**").hasRole("ADMIN") //需要ADMIN角色才可以访问
                 .anyRequest()
@@ -175,10 +113,10 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 }) //验证成功处理器(前后端分离)
                 .failureHandler((request,response,ex) -> {
                     response.setContentType("application/json;charset=utf-8");
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);//返回通用对象，在此无需设置异常状态码
                     PrintWriter out = response.getWriter();
                     if (ex instanceof UsernameNotFoundException || ex instanceof BadCredentialsException) {
-                        out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","用户名或密码错误3")));
+                        out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","用户名或密码错误")));
                     } else if (ex instanceof DisabledException) {
                         out.write(objectMapper.writeValueAsString(CommonReturnType.create("fail","用户被禁用")));
                     } else {
@@ -200,8 +138,6 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .permitAll();
 
 //        http.sessionManagement().invalidSessionUrl("/session/invalid"); //session失效时间
-
-//        http.exceptionHandling().accessDeniedHandler(); //无权访问处理器
     }
 
     @Override

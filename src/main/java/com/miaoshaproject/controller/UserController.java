@@ -19,7 +19,7 @@ import java.util.Random;
 
 @RestController("user")
 @RequestMapping("/user")
-@CrossOrigin(allowCredentials = "true",allowedHeaders = "*")
+@CrossOrigin(origins = {"*"}, allowCredentials = "true")
 public class UserController extends BaseController {
 
     @Autowired
@@ -30,11 +30,15 @@ public class UserController extends BaseController {
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    //用户获取otp短信接口
-    @RequestMapping(value ="/getotp",method = RequestMethod.POST,consumes = CONTENT_TYPE_FORMED)
-    //@Transactional
+    /**
+     * 用户获取otp短信接口
+     * @param telephone
+     * @return
+     * @throws BusinessException
+     */
+    @RequestMapping(value ="/getOtp",method = RequestMethod.POST,consumes = CONTENT_TYPE_FORMED)
     public CommonReturnType getOtp(@RequestParam(value = "telephone") String telephone) throws BusinessException {
-        System.out.println("deal with telephone - "+telephone);
+
         if (telephone == null || telephone == ""){
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
@@ -53,29 +57,40 @@ public class UserController extends BaseController {
         return CommonReturnType.create(CommonReturnType.create("success",telephone+"已发送短信"));
     }
 
-    //手机注册验证码验证
-    @RequestMapping(value = "/verifyotp",method = RequestMethod.POST,consumes = CONTENT_TYPE_FORMED)
+    /**
+     * 手机注册验证码验证
+     * @param telephone
+     * @param otpCode
+     * @return
+     * @throws BusinessException
+     */
+    @RequestMapping(value = "/postOtp",method = RequestMethod.POST,consumes = CONTENT_TYPE_FORMED)
     public CommonReturnType verifyOtp(@RequestParam(value = "telephone")String telephone,
-                                      @RequestParam(value = "verifyCode")String verifyCode) throws BusinessException {
+                                      @RequestParam(value = "otpCode")String otpCode) throws BusinessException {
 
-        System.out.println("telephone:"+telephone+",verifyCode:"+verifyCode);
         if (telephone == null || telephone == "") {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"手机号不能为空");
         }
         String inSessionOtpCode = (String)this.httpServletRequest.getSession().getAttribute(telephone);
-        System.out.println("inSessionOtpCode:"+inSessionOtpCode);
-        if (StringUtils.equals(inSessionOtpCode, verifyCode))
+        if (StringUtils.equals(inSessionOtpCode, otpCode))
             return CommonReturnType.create("success","验证通过");
         else
             return CommonReturnType.create("fail","验证码错误");
     }
 
-    //用户注册
-    @RequestMapping(value = "/registerbyphone",method = RequestMethod.POST,consumes = CONTENT_TYPE_FORMED)
+    /**
+     * 用户注册
+     * @param name
+     * @param telephone
+     * @param password
+     * @return
+     * @throws BusinessException
+     */
+    @RequestMapping(value = "/putUserByPhone",method = RequestMethod.POST,consumes = CONTENT_TYPE_FORMED)
     public CommonReturnType register(@RequestParam(value = "name")String name,
                                      @RequestParam(value = "telephone")String telephone,
                                      @RequestParam(value = "password")String password) throws BusinessException {
-        System.out.println("开始注册流程");
+
         if(name.isEmpty()){
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"请输入正确的用户名");
         }
@@ -96,26 +111,20 @@ public class UserController extends BaseController {
         return CommonReturnType.create("OK","注册成功");
     }
 
-    //用户登录
-//    @RequestMapping("/login")
-//    public void login(@RequestParam(value = "telephone")String telephone,
-//                                  @RequestParam(value = "password")String password){
-//        //String header = httpServletRequest.getHeader(JwtTokenUtils.TOKEN_HEADER);
-//        if(httpServletRequest.getHeader("auth") == null){
-//            return;
-//        }
-//    }
-
-    @RequestMapping("/get")
+    /**
+     * 通过id获取用户信息
+     * @param id
+     * @return
+     * @throws BusinessException
+     */
+    @RequestMapping("/getUserById")
     public CommonReturnType getUser(@RequestParam(value = "id") Integer id) throws BusinessException {
         //调用service服务获取对应id的用户对象并返回给前端
         UserModel userModel = userService.getUserById(id);
-
         //若获取对象不存在
         if (userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_EXIST);
         }
-
         //将核心领域模型转换为可供前端使用的viewobject
         UserVO userVO = convertFromModel(userModel);
         return CommonReturnType.create(userVO);
